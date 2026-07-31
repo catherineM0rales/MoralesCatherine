@@ -1,7 +1,7 @@
 import arcade
 
 import configuracion
-from nivel1 import Nivel1
+from camino_rosas import CaminoRosas
 
 # ==========================================
 # CONFIGURACIÓN
@@ -116,7 +116,16 @@ class Cinematica(arcade.View):
                     {
                         "personaje": "Chico",
                         "texto": "No lo sé. Ve a la cueva que está cerca de aquí. Nadie va a encontrarte."
-                    },
+                    }
+
+
+                ]
+            },
+
+            {
+                "imagen": arcade.load_texture("imagenes/cinematica/escena4.png"),
+                "sonido": None,
+                "dialogos": [
 
                     {
                         "personaje": configuracion.NOMBRE_JUGADOR,
@@ -135,6 +144,7 @@ class Cinematica(arcade.View):
 
                 ]
             },
+            
 
             {
                 "imagen": arcade.load_texture("imagenes/cinematica/escena6.png"),
@@ -194,7 +204,20 @@ class Cinematica(arcade.View):
             },
 
             {
-                "imagen": arcade.load_texture("imagenes/cinematica/escena11.png"),
+                "imagen": arcade.load_texture("imagenes/cinematica/escena12.png"),
+                "sonido": None,
+                "dialogos": [
+
+                    {
+                        "personaje": configuracion.NOMBRE_JUGADOR,
+                        "texto": "!!!"
+                    }
+
+                ]
+            },
+
+            {
+                "imagen": arcade.load_texture("imagenes/cinematica/escena13.png"),
                 "sonido": None,
                 "dialogos": [
 
@@ -375,7 +398,7 @@ class Cinematica(arcade.View):
         # ¿Terminó la cinemática?
         if self.escena_actual >= len(self.escenas):
 
-            self.window.show_view(Nivel1())
+            self.window.show_view(CaminoRosas())
             return
 
         # Reiniciar la máquina de escribir
