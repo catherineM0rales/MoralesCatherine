@@ -1,16 +1,21 @@
-# ----------------------------------
-# CONFIGURACIÓN DEL JUEGO
-# ----------------------------------
+# ==========================================================
+# CONFIGURACIÓN DE LA VENTANA
+# ==========================================================
 
-ANCHO = 1280
-ALTO = 720
+ANCHO = 1200
+ALTO = 800
+TITULO = "Los Imperdonables"
 
-TITULO = "Imperdonables"
+# ==========================================================
+# TAMAÑO DEL MAPA DEL NIVEL 1
+# ==========================================================
 
-VELOCIDAD_JUGADOR = 4
-VELOCIDAD_VILLANO = 1
+ANCHO_MAPA = 1800
+ALTO_MAPA = 1000
 
-TOTAL_RECUERDOS = 3
 
-# Se guardará el nombre del jugador
-NOMBRE_JUGADOR = ""
+# ==========================================================
+# VELOCIDAD DEL JUGADOR
+# ==========================================================
+
+VELOCIDAD_JUGADOR = 5

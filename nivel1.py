@@ -1,186 +1,1384 @@
 import arcade
 import configuracion
-import nivel2  
+from entidades import Player
+import nivel2
 
-class Player(arcade.Sprite):
-    def __init__(self):
-        super().__init__()
-        self.tex_quieto = arcade.load_texture("imagenes/personajes/protagonista/quieto.png")
-        self.tex_caminar1 = arcade.load_texture("imagenes/personajes/protagonista/caminar1.png")
-        self.tex_caminar2 = arcade.load_texture("imagenes/personajes/protagonista/caminar2.png")
-        self.texture = self.tex_quieto
-        self.scale = 0.15
-        self.anim_timer = 0
-        self.frame = 0
 
-    def update_animation(self, dx, dy):
-        if dx != 0 or dy != 0:
-            self.anim_timer += 1
-            if self.anim_timer > 10:
-                self.anim_timer = 0
-                self.frame = 1 - self.frame
-                self.texture = self.tex_caminar1 if self.frame == 0 else self.tex_caminar2
-        else:
-            self.texture = self.tex_quieto
+# ============================================================
+# CONFIGURACIÓN DEL MAPA
+# ============================================================
+
+ANCHO_MAPA = 1536
+ALTO_MAPA = 1024
+
+# El protagonista pasa al Nivel 2 al llegar
+# aproximadamente a donde estaba el villano central.
+SALIDA_X = 1430
+
+# Margen de las colisiones exteriores.
+MARGEN_MAPA = 30
+
+
+# ============================================================
+# ENEMIGO: GUARDIA
+# ============================================================
+
+class Guardia(arcade.Sprite):
+
+    def __init__(
+        self,
+        x,
+        y,
+        limite_arriba,
+        limite_abajo,
+        velocidad=1.5
+    ):
+
+        super().__init__(
+            "imagenes/personajes/enemigos/guardia.png",
+            scale=0.08
+        )
+
+        self.center_x = x
+        self.center_y = y
+
+        self.limite_arriba = limite_arriba
+        self.limite_abajo = limite_abajo
+
+        self.velocidad = velocidad
+
+        # Cada guardia tiene su propia dirección.
+        self.direccion = 1
+
+    def patrullar(self):
+
+        self.center_y += self.velocidad * self.direccion
+
+        if self.center_y >= self.limite_arriba:
+
+            self.center_y = self.limite_arriba
+            self.direccion = -1
+
+        elif self.center_y <= self.limite_abajo:
+
+            self.center_y = self.limite_abajo
+            self.direccion = 1
+
+
+# ============================================================
+# VILLANO PRINCIPAL
+# ============================================================
+
+class VillanoInseguridad(arcade.Sprite):
+
+    def __init__(self, x, y):
+
+        super().__init__(
+            "imagenes/personajes/enemigos/enemigo1.png",
+            scale=0.15
+        )
+
+        self.center_x = x
+        self.center_y = y
+
+
+# ============================================================
+# FRAGMENTOS DEL DIBUJO
+# ============================================================
+
+class FragmentoDibujo(arcade.Sprite):
+
+    def __init__(self, x, y):
+
+        super().__init__(
+            "imagenes/objetos/dibujo.png",
+            scale=0.10
+        )
+
+        self.center_x = x
+        self.center_y = y
+
+
+# ============================================================
+# NIVEL 1
+# ============================================================
 
 class Nivel1(arcade.View):
+
     def __init__(self):
+
         super().__init__()
-        self.mapa = arcade.load_texture("imagenes/mapas/nivel_inseguridad.png")
+
+
+        # ====================================================
+        # MAPA
+        # ====================================================
+
+        self.mapa = arcade.load_texture(
+            "imagenes/mapas/nivel_inseguridad.png"
+        )
+
+
+        # ====================================================
+        # CÁMARAS
+        # ====================================================
+
         self.camera = arcade.Camera2D()
-        self.camera.position = (600, 400)
-        
+        self.gui_camera = arcade.Camera2D()
+
+
+        # ====================================================
+        # JUGADOR
+        # ====================================================
+
         self.player = Player()
-        self.player.center_x, self.player.center_y = 150, 400  
-        
+
+        # Posición inicial.
+        # Un poco más arriba.
+        self.player.center_x = 90
+        self.player.center_y = 540
+
         self.player_list = arcade.SpriteList()
         self.player_list.append(self.player)
-        
-        self.paredes = arcade.SpriteList()
+
+
+        # ====================================================
+        # TECLAS
+        # ====================================================
+
         self.teclas = set()
-        
-        # Villano (Inseguridad) patrullando verticalmente
-        self.enemigo_list = arcade.SpriteList()
-        self.enemigo = arcade.Sprite("imagenes/personajes/enemigos/enemigo1.png", scale=0.15)
-        self.enemigo.center_x, self.enemigo.center_y = 600, 400
-        self.enemigo.change_y = 2  
-        self.enemigo_list.append(self.enemigo)
-        
-        # Dibujos dispersados por el mapa 📄
-        self.dibujo_list = arcade.SpriteList()
-        posiciones_dibujos = [(400, 650), (950, 250), (1050, 650)]
-        for px, py in posiciones_dibujos:
-            dib = arcade.Sprite("imagenes/objetos/dibujo.png", scale=0.1)
-            dib.center_x, dib.center_y = px, py
-            self.dibujo_list.append(dib)
-        
-        # Diálogo inicial del villano
-        self.mostrar_dialogo = True
-        self.tiempo_dialogo = 0
-        
-        # Oscuridad 🌑
-        self.nivel_opacidad = 0
-        self.temporizador_ciclo = 0
-        self.fase_oscura = False
 
-        self.setup_colisiones()
 
-    def setup_colisiones(self):
-        color_transparente = (0, 0, 0, 0)
-        
-        # Paredes perimetrales con aberturas correctas para entrada y salida
-        # Izquierda (dejando hueco para el túnel en y: 350 a 450)
-        p_izq1 = arcade.SpriteSolidColor(20, 350, color_transparente)
-        p_izq1.center_x, p_izq1.center_y = 10, 175
-        self.paredes.append(p_izq1)
-        
-        p_izq2 = arcade.SpriteSolidColor(20, 350, color_transparente)
-        p_izq2.center_x, p_izq2.center_y = 10, 625
-        self.paredes.append(p_izq2)
+        # ====================================================
+        # VILLANO PRINCIPAL
+        # ====================================================
 
-        # Derecha (dejando hueco para la puerta en y: 380 a 520)
-        p_der1 = arcade.SpriteSolidColor(20, 280, color_transparente)
-        p_der1.center_x, p_der1.center_y = 1190, 140
-        self.paredes.append(p_der1)
-        
-        p_der2 = arcade.SpriteSolidColor(20, 280, color_transparente)
-        p_der2.center_x, p_der2.center_y = 1190, 660
-        self.paredes.append(p_der2)
+        self.villano = VillanoInseguridad(
+            1430,
+            540
+        )
 
-        # Abajo y Arriba completos
-        p_abajo = arcade.SpriteSolidColor(1200, 20, color_transparente)
-        p_abajo.center_x, p_abajo.center_y = 600, 10
-        self.paredes.append(p_abajo)
+        self.villano_list = arcade.SpriteList()
+        self.villano_list.append(self.villano)
 
-        p_arriba = arcade.SpriteSolidColor(1200, 20, color_transparente)
-        p_arriba.center_x, p_arriba.center_y = 600, 790
-        self.paredes.append(p_arriba)
 
-        # Obstáculos internos del mapa
-        obstaculos_internos = [
-            (350, 600, 100, 80),  
-            (850, 600, 100, 80),  
-            (600, 430, 90, 80),  
-            (330, 220, 100, 80),  
-            (870, 220, 100, 80)   
+        # ====================================================
+        # GUARDIAS
+        # ====================================================
+
+        self.guardias = arcade.SpriteList()
+
+
+        # ----------------------------------------------------
+        # PAR 1
+        # ----------------------------------------------------
+
+        self.guardias.append(
+            Guardia(
+                390,
+                620,
+                720,
+                350,
+                1.4
+            )
+        )
+
+        self.guardias.append(
+            Guardia(
+                390,
+                450,
+                720,
+                350,
+                1.1
+            )
+        )
+
+
+        # ----------------------------------------------------
+        # PAR 2
+        # ----------------------------------------------------
+
+        self.guardias.append(
+            Guardia(
+                720,
+                650,
+                730,
+                300,
+                1.7
+            )
+        )
+
+        self.guardias.append(
+            Guardia(
+                720,
+                420,
+                730,
+                300,
+                1.3
+            )
+        )
+
+
+        # ----------------------------------------------------
+        # PAR 3
+        # ----------------------------------------------------
+
+        self.guardias.append(
+            Guardia(
+                1060,
+                630,
+                750,
+                350,
+                1.5
+            )
+        )
+
+        self.guardias.append(
+            Guardia(
+                1060,
+                440,
+                750,
+                350,
+                1.2
+            )
+        )
+
+
+        # ----------------------------------------------------
+        # PAR 4
+        # ----------------------------------------------------
+
+        self.guardias.append(
+            Guardia(
+                1270,
+                600,
+                700,
+                280,
+                1.8
+            )
+        )
+
+        self.guardias.append(
+            Guardia(
+                1270,
+                390,
+                700,
+                280,
+                1.4
+            )
+        )
+
+
+        # ====================================================
+        # FRAGMENTOS
+        # ====================================================
+
+        self.fragmentos = arcade.SpriteList()
+
+        posiciones_fragmentos = [
+            (280, 780),
+            (520, 350),
+            (760, 760),
+            (1010, 420),
+            (1260, 760)
         ]
-        for x, y, w, h in obstaculos_internos:
-            obs = arcade.SpriteSolidColor(int(w), int(h), color_transparente)
-            obs.center_x, obs.center_y = x, y
-            self.paredes.append(obs)
 
-    def on_key_press(self, key, mod): 
+        for x, y in posiciones_fragmentos:
+
+            fragmento = FragmentoDibujo(x, y)
+
+            self.fragmentos.append(fragmento)
+
+
+        # ====================================================
+        # COLISIONES
+        # ====================================================
+
+        self.paredes = arcade.SpriteList()
+
+        self.configurar_colisiones()
+
+
+        # ====================================================
+        # FASE DE INTRODUCCIÓN
+        # ====================================================
+
+        self.fase = "caminar"
+
+        self.tiempo_fase = 0
+
+        self.destino_intro_x = 230
+
+        self.duracion_caminata = 2.8
+
+
+        # ====================================================
+        # CÁMARA DE INTRODUCCIÓN
+        # ====================================================
+
+        self.camera.position = (
+            self.player.center_x + 250,
+            self.player.center_y
+        )
+
+
+        # Objetivo de la cámara:
+        # extremo derecho del mapa.
+
+        self.camera_objetivo_x = (
+            ANCHO_MAPA -
+            configuracion.ANCHO / 2
+        )
+
+        self.camera_objetivo_y = (
+            ALTO_MAPA / 2
+        )
+
+
+        # ====================================================
+        # CARTEL
+        # ====================================================
+
+        self.mostrar_instrucciones = False
+
+
+        # ====================================================
+        # OSCURIDAD
+        # ====================================================
+
+        self.opacidad = 0
+
+        self.oscuridad_tiempo = 0
+
+        self.oscuridad_velocidad = 28
+
+        self.oscuridad_maxima = 205
+
+        self.oscuridad_subiendo = False
+
+        self.oscuridad_activa = False
+
+
+        # ====================================================
+        # PARPADEO FINAL
+        # ====================================================
+
+        self.final_completado = False
+
+        self.final_parpadeo = False
+
+        self.final_opacidad = 0
+
+        self.final_velocidad = 90
+
+
+        # ====================================================
+        # MENSAJES
+        # ====================================================
+
+        self.mensaje = ""
+
+        self.tiempo_mensaje = 0
+
+
+    # ========================================================
+    # COLISIONES
+    # ========================================================
+
+    def crear_pared(
+        self,
+        x,
+        y,
+        ancho,
+        alto
+    ):
+
+        pared = arcade.SpriteSolidColor(
+            int(ancho),
+            int(alto),
+            (0, 0, 0, 0)
+        )
+
+        pared.center_x = x
+        pared.center_y = y
+
+        self.paredes.append(pared)
+
+
+    def configurar_colisiones(self):
+
+        grosor = 35
+
+
+        # ----------------------------------------------------
+        # BORDE IZQUIERDO
+        # ----------------------------------------------------
+
+        self.crear_pared(
+            MARGEN_MAPA,
+            ALTO_MAPA / 2,
+            grosor,
+            ALTO_MAPA
+        )
+
+
+        # ----------------------------------------------------
+        # BORDE DERECHO
+        # ----------------------------------------------------
+
+        self.crear_pared(
+            ANCHO_MAPA - MARGEN_MAPA,
+            ALTO_MAPA / 2,
+            grosor,
+            ALTO_MAPA
+        )
+
+
+        # ----------------------------------------------------
+        # BORDE SUPERIOR
+        # ----------------------------------------------------
+
+        self.crear_pared(
+            ANCHO_MAPA / 2,
+            ALTO_MAPA - MARGEN_MAPA,
+            ANCHO_MAPA,
+            grosor
+        )
+
+
+        # ----------------------------------------------------
+        # BORDE INFERIOR
+        # ----------------------------------------------------
+
+        self.crear_pared(
+            ANCHO_MAPA / 2,
+            MARGEN_MAPA,
+            ANCHO_MAPA,
+            grosor
+        )
+
+
+    # ========================================================
+    # TECLAS
+    # ========================================================
+
+    def on_key_press(
+        self,
+        key,
+        modifiers
+    ):
+
+        # ----------------------------------------------------
+        # CARTEL
+        # ----------------------------------------------------
+
+        if self.fase == "instrucciones":
+
+            if key == arcade.key.ENTER:
+
+                self.mostrar_instrucciones = False
+
+                self.fase = "jugando"
+
+                self.tiempo_fase = 0
+
+                self.oscuridad_activa = True
+
+                self.teclas.clear()
+
+            return
+
+
+        # ----------------------------------------------------
+        # SI TODAVÍA NO ESTAMOS JUGANDO
+        # ----------------------------------------------------
+
+        if self.fase != "jugando":
+
+            return
+
+
         self.teclas.add(key)
-        
-    def on_key_release(self, key, mod): 
+
+
+    def on_key_release(
+        self,
+        key,
+        modifiers
+    ):
+
         self.teclas.discard(key)
 
-    def on_update(self, delta_time):
-        dx = (arcade.key.D in self.teclas or arcade.key.RIGHT in self.teclas) - (arcade.key.A in self.teclas or arcade.key.LEFT in self.teclas)
-        dy = (arcade.key.W in self.teclas or arcade.key.UP in self.teclas) - (arcade.key.S in self.teclas or arcade.key.DOWN in self.teclas)
-        
-        self.player.center_x += dx * configuracion.VELOCIDAD_JUGADOR
-        if arcade.check_for_collision_with_list(self.player, self.paredes): 
-            self.player.center_x -= dx * configuracion.VELOCIDAD_JUGADOR
-            
-        self.player.center_y += dy * configuracion.VELOCIDAD_JUGADOR
-        if arcade.check_for_collision_with_list(self.player, self.paredes): 
-            self.player.center_y -= dy * configuracion.VELOCIDAD_JUGADOR
-            
-        self.player.update_animation(dx, dy)
 
-        # Patrullaje vertical del enemigo
-        self.enemigo.center_y += self.enemigo.change_y
-        if self.enemigo.center_y < 250 or self.enemigo.center_y > 600:
-            self.enemigo.change_y *= -1
+    # ========================================================
+    # MOVIMIENTO DEL JUGADOR
+    # ========================================================
 
-        # Control del diálogo inicial
-        if self.mostrar_dialogo:
-            self.tiempo_dialogo += delta_time
-            if self.tiempo_dialogo > 5:
-                self.mostrar_dialogo = False
+    def mover_jugador(self):
 
-        # Ciclo de oscuridad
-        if not self.mostrar_dialogo:
-            self.temporizador_ciclo += delta_time
-            if self.temporizador_ciclo > 4:
-                self.fase_oscura = True
-                self.temporizador_ciclo = 0
+        velocidad = configuracion.VELOCIDAD_JUGADOR
 
-            if self.fase_oscura:
-                self.nivel_opacidad += 3
-                if self.nivel_opacidad >= 235:
-                    self.nivel_opacidad = 235
-                    self.fase_oscura = False
-            elif self.nivel_opacidad > 0:
-                self.nivel_opacidad -= 1  
+        dx = 0
+        dy = 0
 
-        # Recoger dibujos
-        dibujos_tocados = arcade.check_for_collision_with_list(self.player, self.dibujo_list)
-        for dibujo in dibujos_tocados:
-            dibujo.remove_from_sprite_lists()
 
-        # Condición de victoria: todos los dibujos recolectados Y cruzar la puerta de la derecha (y entre 380 y 520)
-        if len(self.dibujo_list) == 0 and self.player.center_x >= 1170 and (380 <= self.player.center_y <= 520):
-            self.window.show_view(nivel2.Nivel2())
+        # ----------------------------------------------------
+        # WASD
+        # ----------------------------------------------------
+
+        if arcade.key.W in self.teclas:
+            dy += velocidad
+
+        if arcade.key.S in self.teclas:
+            dy -= velocidad
+
+        if arcade.key.A in self.teclas:
+            dx -= velocidad
+
+        if arcade.key.D in self.teclas:
+            dx += velocidad
+
+
+        # ----------------------------------------------------
+        # FLECHAS
+        # ----------------------------------------------------
+
+        if arcade.key.UP in self.teclas:
+            dy += velocidad
+
+        if arcade.key.DOWN in self.teclas:
+            dy -= velocidad
+
+        if arcade.key.LEFT in self.teclas:
+            dx -= velocidad
+
+        if arcade.key.RIGHT in self.teclas:
+            dx += velocidad
+
+
+        # ----------------------------------------------------
+        # MOVIMIENTO HORIZONTAL
+        # ----------------------------------------------------
+
+        self.player.center_x += dx
+
+        if arcade.check_for_collision_with_list(
+            self.player,
+            self.paredes
+        ):
+
+            self.player.center_x -= dx
+
+
+        # ----------------------------------------------------
+        # MOVIMIENTO VERTICAL
+        # ----------------------------------------------------
+
+        self.player.center_y += dy
+
+        if arcade.check_for_collision_with_list(
+            self.player,
+            self.paredes
+        ):
+
+            self.player.center_y -= dy
+
+
+        # ----------------------------------------------------
+        # ANIMACIÓN
+        # ----------------------------------------------------
+
+        self.player.update_animation(
+            dx,
+            dy
+        )
+
+
+    # ========================================================
+    # CÁMARA
+    # ========================================================
+
+    def mover_camara_hacia(
+        self,
+        objetivo_x,
+        objetivo_y,
+        delta_time
+    ):
+
+        actual_x = self.camera.position[0]
+        actual_y = self.camera.position[1]
+
+
+        # Movimiento suave.
+        # Un poco más rápido que antes.
+
+        velocidad = 4.0
+
+
+        nuevo_x = actual_x + (
+            objetivo_x - actual_x
+        ) * velocidad * delta_time
+
+
+        nuevo_y = actual_y + (
+            objetivo_y - actual_y
+        ) * velocidad * delta_time
+
+
+        # ----------------------------------------------------
+        # LIMITES DE LA CÁMARA
+        # ----------------------------------------------------
+
+        mitad_ancho = configuracion.ANCHO / 2
+        mitad_alto = configuracion.ALTO / 2
+
+
+        nuevo_x = max(
+            mitad_ancho,
+            min(
+                ANCHO_MAPA - mitad_ancho,
+                nuevo_x
+            )
+        )
+
+
+        nuevo_y = max(
+            mitad_alto,
+            min(
+                ALTO_MAPA - mitad_alto,
+                nuevo_y
+            )
+        )
+
+
+        self.camera.position = (
+            nuevo_x,
+            nuevo_y
+        )
+
+
+    # ========================================================
+    # OSCURIDAD
+    # ========================================================
+
+    def actualizar_oscuridad(
+        self,
+        delta_time
+    ):
+
+        if not self.oscuridad_activa:
+
+            return
+
+
+        self.oscuridad_tiempo += delta_time
+
+
+        # ----------------------------------------------------
+        # ESPERA
+        # ----------------------------------------------------
+
+        if not self.oscuridad_subiendo:
+
+            if self.oscuridad_tiempo >= 4.5:
+
+                self.oscuridad_subiendo = True
+
+                self.oscuridad_tiempo = 0
+
+
+        # ----------------------------------------------------
+        # OSCURECER
+        # ----------------------------------------------------
+
+        else:
+
+            self.opacidad += (
+                self.oscuridad_velocidad *
+                delta_time
+            )
+
+
+            if self.opacidad >= self.oscuridad_maxima:
+
+                self.opacidad = self.oscuridad_maxima
+
+                self.oscuridad_subiendo = False
+
+                self.oscuridad_tiempo = 0
+
+
+        # ----------------------------------------------------
+        # ACLARAR
+        # ----------------------------------------------------
+
+        if (
+            not self.oscuridad_subiendo
+            and self.opacidad > 0
+        ):
+
+            self.opacidad -= (
+                13 * delta_time
+            )
+
+
+            if self.opacidad < 0:
+
+                self.opacidad = 0
+
+
+    # ========================================================
+    # ACTUALIZACIÓN
+    # ========================================================
+
+    def on_update(
+        self,
+        delta_time
+    ):
+
+        self.tiempo_fase += delta_time
+
+
+        # ====================================================
+        # 1. CAMINATA INICIAL
+        # ====================================================
+
+        if self.fase == "caminar":
+
+            velocidad_intro = 45
+
+
+            self.player.center_x += (
+                velocidad_intro *
+                delta_time
+            )
+
+
+            self.player.update_animation(
+                velocidad_intro,
+                0
+            )
+
+
+            # La cámara acompaña al protagonista.
+
+            self.camera.position = (
+                self.player.center_x + 250,
+                self.player.center_y
+            )
+
+
+            if (
+                self.player.center_x >=
+                self.destino_intro_x
+                or
+                self.tiempo_fase >=
+                self.duracion_caminata
+            ):
+
+                self.fase = "camara"
+
+                self.tiempo_fase = 0
+
+            return
+
+
+        # ====================================================
+        # 2. CÁMARA VA AL FINAL DEL MAPA
+        # ====================================================
+
+        if self.fase == "camara":
+
+            self.mover_camara_hacia(
+                self.camera_objetivo_x,
+                self.camera_objetivo_y,
+                delta_time
+            )
+
+
+            # Después de 3 segundos,
+            # aseguramos que llegó.
+
+            if self.tiempo_fase >= 3.0:
+
+                self.camera.position = (
+                    self.camera_objetivo_x,
+                    self.camera_objetivo_y
+                )
+
+                self.fase = "espera_camara"
+
+                self.tiempo_fase = 0
+
+            return
+
+
+        # ====================================================
+        # 3. LA CÁMARA MUESTRA EL MAPA
+        # ====================================================
+
+        if self.fase == "espera_camara":
+
+            self.camera.position = (
+                self.camera_objetivo_x,
+                self.camera_objetivo_y
+            )
+
+
+            # Tiempo mirando el mapa.
+
+            if self.tiempo_fase >= 2.5:
+
+                self.fase = "regreso"
+
+                self.tiempo_fase = 0
+
+            return
+
+
+        # ====================================================
+        # 4. CÁMARA REGRESA AL PROTAGONISTA
+        # ====================================================
+
+        if self.fase == "regreso":
+
+            self.mover_camara_hacia(
+                self.player.center_x,
+                self.player.center_y,
+                delta_time
+            )
+
+
+            # Después de 3 segundos,
+            # terminamos el regreso.
+
+            if self.tiempo_fase >= 3.0:
+
+                self.camera.position = (
+                    self.player.center_x,
+                    self.player.center_y
+                )
+
+
+                # ACTIVAR CARTEL.
+
+                self.fase = "instrucciones"
+
+                self.mostrar_instrucciones = True
+
+                self.tiempo_fase = 0
+
+                self.teclas.clear()
+
+            return
+
+
+        # ====================================================
+        # 5. CARTEL
+        # ====================================================
+
+        if self.fase == "instrucciones":
+
+            self.mostrar_instrucciones = True
+
+            self.teclas.clear()
+
+            return
+
+
+        # ====================================================
+        # 6. JUEGO
+        # ====================================================
+
+        if self.fase != "jugando":
+
+            return
+
+
+        # ====================================================
+        # MOVIMIENTO
+        # ====================================================
+
+        self.mover_jugador()
+
+
+        # ====================================================
+        # SALIDA DEL NIVEL
+        # ====================================================
+
+        # IMPORTANTE:
+        #
+        # El jugador pasa al Nivel 2 cuando alcanza
+        # la posición horizontal del antiguo villano central.
+
+        if self.player.center_x >= SALIDA_X:
+
+            self.teclas.clear()
+
+            self.window.show_view(
+                nivel2.Nivel2()
+            )
+
+            return
+
+
+        # ====================================================
+        # GUARDIAS
+        # ====================================================
+
+        for guardia in self.guardias:
+
+            guardia.patrullar()
+
+
+        # ====================================================
+        # COLISIÓN CON GUARDIAS
+        # ====================================================
+
+        guardias_tocados = (
+            arcade.check_for_collision_with_list(
+                self.player,
+                self.guardias
+            )
+        )
+
+
+        if len(guardias_tocados) > 0:
+
+            self.reiniciar_posicion()
+
+
+        # ====================================================
+        # RECOGER FRAGMENTOS
+        # ====================================================
+
+        fragmentos_tocados = (
+            arcade.check_for_collision_with_list(
+                self.player,
+                self.fragmentos
+            )
+        )
+
+
+        for fragmento in fragmentos_tocados:
+
+            fragmento.remove_from_sprite_lists()
+
+            self.mensaje = (
+                "Encontraste un fragmento del dibujo."
+            )
+
+            self.tiempo_mensaje = 2.0
+
+
+        # ====================================================
+        # MENSAJE
+        # ====================================================
+
+        if self.tiempo_mensaje > 0:
+
+            self.tiempo_mensaje -= delta_time
+
+
+        # ====================================================
+        # CÁMARA NORMAL
+        # ====================================================
+
+        self.mover_camara_hacia(
+            self.player.center_x,
+            self.player.center_y,
+            delta_time
+        )
+
+
+        # ====================================================
+        # OSCURIDAD
+        # ====================================================
+
+        self.actualizar_oscuridad(
+            delta_time
+        )
+
+
+        # ====================================================
+        # PARPADEO FINAL
+        # ====================================================
+
+        # Los fragmentos todavía pueden activar
+        # el efecto visual, pero NO controlan
+        # el cambio de nivel.
+
+        if (
+            len(self.fragmentos) == 0
+            and not self.final_parpadeo
+            and not self.final_completado
+        ):
+
+            self.final_parpadeo = True
+
+            self.final_opacidad = 0
+
+            self.teclas.clear()
+
+
+        # ----------------------------------------------------
+        # SUBIR PARPADEO
+        # ----------------------------------------------------
+
+        if self.final_parpadeo:
+
+            self.final_opacidad += (
+                self.final_velocidad *
+                delta_time
+            )
+
+
+            if self.final_opacidad >= 255:
+
+                self.final_opacidad = 255
+
+                self.guardias.clear()
+
+                self.villano_list.clear()
+
+                self.final_completado = True
+
+                self.final_parpadeo = False
+
+            return
+
+
+        # ----------------------------------------------------
+        # BAJAR PARPADEO
+        # ----------------------------------------------------
+
+        if self.final_completado:
+
+            self.final_opacidad -= (
+                self.final_velocidad *
+                delta_time
+            )
+
+
+            if self.final_opacidad <= 0:
+
+                self.final_opacidad = 0
+
+                self.final_completado = False
+
+
+    # ========================================================
+    # REINICIAR POSICIÓN
+    # ========================================================
+
+    def reiniciar_posicion(self):
+
+        self.player.center_x = 230
+
+        self.player.center_y = 540
+
+        self.teclas.clear()
+
+        self.mensaje = (
+            "¡Cuidado! Debes esquivar a los guardias."
+        )
+
+        self.tiempo_mensaje = 2.0
+
+
+    # ========================================================
+    # DIBUJAR
+    # ========================================================
 
     def on_draw(self):
+
         self.clear()
+
+
+        # ====================================================
+        # CÁMARA DEL MUNDO
+        # ====================================================
+
         self.camera.use()
-        
-        arcade.draw_texture_rect(self.mapa, arcade.rect.LBWH(0, 0, 1200, 800))
-        
+
+
+        # ====================================================
+        # MAPA
+        # ====================================================
+
+        arcade.draw_texture_rect(
+            self.mapa,
+            arcade.LBWH(
+                0,
+                0,
+                ANCHO_MAPA,
+                ALTO_MAPA
+            )
+        )
+
+
+        # ====================================================
+        # FRAGMENTOS
+        # ====================================================
+
+        self.fragmentos.draw()
+
+
+        # ====================================================
+        # GUARDIAS
+        # ====================================================
+
+        self.guardias.draw()
+
+
+        # ====================================================
+        # VILLANO
+        # ====================================================
+
+        self.villano_list.draw()
+
+
+        # ====================================================
+        # JUGADOR
+        # ====================================================
+
         self.player_list.draw()
-        self.enemigo_list.draw()
-        self.dibujo_list.draw()
-        
-        if self.mostrar_dialogo:
-            arcade.draw_text("Inseguridad: Recolecta todos los trazos antes de que te consuma la oscuridad...", 
-                             self.enemigo.center_x - 220, self.enemigo.center_y + 40, 
-                             arcade.color.RED, 14, bold=True)
-        
-        if self.nivel_opacidad > 0:
+
+
+        # ====================================================
+        # CARTEL DE INSTRUCCIONES
+        # ====================================================
+
+        if self.fase == "instrucciones":
+
+            self.gui_camera.use()
+
+
+            # ------------------------------------------------
+            # FONDO OSCURO
+            # ------------------------------------------------
+
             arcade.draw_lrbt_rectangle_filled(
-                0, 1200, 0, 800,
-                (0, 0, 0, self.nivel_opacidad)
+                0,
+                configuracion.ANCHO,
+                0,
+                configuracion.ALTO,
+                (0, 0, 0, 200)
+            )
+
+
+            # ------------------------------------------------
+            # CUADRO
+            # ------------------------------------------------
+
+            margen_x = 120
+            margen_y = 120
+
+
+            arcade.draw_lrbt_rectangle_filled(
+                margen_x,
+                configuracion.ANCHO - margen_x,
+                margen_y,
+                configuracion.ALTO - margen_y,
+                (25, 25, 35)
+            )
+
+
+            arcade.draw_lrbt_rectangle_outline(
+                margen_x,
+                configuracion.ANCHO - margen_x,
+                margen_y,
+                configuracion.ALTO - margen_y,
+                arcade.color.GOLD,
+                3
+            )
+
+
+            centro_x = (
+                configuracion.ANCHO / 2
+            )
+
+
+            # ------------------------------------------------
+            # TÍTULO
+            # ------------------------------------------------
+
+            arcade.draw_text(
+                "OBJETIVO",
+                centro_x,
+                570,
+                arcade.color.GOLD,
+                32,
+                bold=True,
+                anchor_x="center"
+            )
+
+
+            # ------------------------------------------------
+            # TEXTO
+            # ------------------------------------------------
+
+            arcade.draw_text(
+                "Encuentra todos los fragmentos",
+                centro_x,
+                475,
+                arcade.color.WHITE,
+                22,
+                anchor_x="center"
+            )
+
+
+            arcade.draw_text(
+                "del dibujo que están dispersos por el mapa.",
+                centro_x,
+                435,
+                arcade.color.WHITE,
+                22,
+                anchor_x="center"
+            )
+
+
+            arcade.draw_text(
+                "Evita a los guardias y llega hasta la salida.",
+                centro_x,
+                365,
+                arcade.color.WHITE,
+                22,
+                anchor_x="center"
+            )
+
+
+            arcade.draw_text(
+                "La oscuridad irá apareciendo poco a poco...",
+                centro_x,
+                300,
+                arcade.color.WHITE,
+                22,
+                anchor_x="center"
+            )
+
+
+            arcade.draw_text(
+                "Cuando tengas todos los fragmentos, podrás escapar.",
+                centro_x,
+                255,
+                arcade.color.WHITE,
+                20,
+                anchor_x="center"
+            )
+
+
+            # ------------------------------------------------
+            # CONTROLES
+            # ------------------------------------------------
+
+            arcade.draw_text(
+                "WASD / FLECHAS: Moverse",
+                centro_x,
+                190,
+                arcade.color.GOLD,
+                20,
+                bold=True,
+                anchor_x="center"
+            )
+
+
+            # ------------------------------------------------
+            # ENTER
+            # ------------------------------------------------
+
+            arcade.draw_text(
+                "Presiona ENTER para comenzar",
+                centro_x,
+                145,
+                arcade.color.YELLOW,
+                19,
+                bold=True,
+                anchor_x="center"
+            )
+
+
+            # No dibujamos el HUD debajo del cartel.
+
+            return
+
+
+        # ====================================================
+        # HUD
+        # ====================================================
+
+        self.gui_camera.use()
+
+
+        # ----------------------------------------------------
+        # CONTADOR
+        # ----------------------------------------------------
+
+        arcade.draw_text(
+            f"Fragmentos: {len(self.fragmentos)}",
+            25,
+            configuracion.ALTO - 45,
+            arcade.color.WHITE,
+            20,
+            bold=True
+        )
+
+
+        # ----------------------------------------------------
+        # MENSAJE
+        # ----------------------------------------------------
+
+        if self.tiempo_mensaje > 0:
+
+            arcade.draw_text(
+                self.mensaje,
+                configuracion.ANCHO / 2,
+                configuracion.ALTO - 75,
+                arcade.color.YELLOW,
+                18,
+                bold=True,
+                anchor_x="center"
+            )
+
+
+        # ====================================================
+        # OSCURIDAD NORMAL
+        # ====================================================
+
+        if self.opacidad > 0:
+
+            arcade.draw_lrbt_rectangle_filled(
+                0,
+                configuracion.ANCHO,
+                0,
+                configuracion.ALTO,
+                (
+                    0,
+                    0,
+                    0,
+                    int(self.opacidad)
+                )
+            )
+
+
+        # ====================================================
+        # PARPADEO FINAL
+        # ====================================================
+
+        if (
+            self.final_parpadeo
+            or self.final_completado
+        ):
+
+            arcade.draw_lrbt_rectangle_filled(
+                0,
+                configuracion.ANCHO,
+                0,
+                configuracion.ALTO,
+                (
+                    0,
+                    0,
+                    0,
+                    int(self.final_opacidad)
+                )
             )
