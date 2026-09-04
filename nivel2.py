@@ -3,6 +3,7 @@ import math
 import configuracion
 
 from entidades import Player, VillanoPrincipal
+import nivel3
 
 
 # ============================================================
@@ -798,7 +799,12 @@ class Nivel2(arcade.View):
 
             if key == arcade.key.ENTER:
 
-                arcade.exit()
+                if self.final_ganado:
+                    # Final bueno → cargar el Nivel 3
+                    self.window.show_view(nivel3.Nivel3())
+                else:
+                    # Final malo → salir del juego
+                    arcade.exit()
 
             return
 
@@ -1160,7 +1166,7 @@ class Nivel2(arcade.View):
             )
 
             arcade.draw_text(
-                "Ahora pondrás a prueba lo aprendido.",
+                "El DESAFÍO FINAL te espera...",
                 centro_x,
                 250,
                 arcade.color.GOLD,
@@ -1170,7 +1176,7 @@ class Nivel2(arcade.View):
             )
 
             arcade.draw_text(
-                "Presiona ENTER para continuar",
+                "Presiona ENTER para el Nivel 3",
                 centro_x,
                 180,
                 arcade.color.YELLOW,
@@ -1314,7 +1320,7 @@ class Nivel2(arcade.View):
             if self.final_ganado:
 
                 arcade.draw_text(
-                    "¡FELICIDADES!",
+                    "¡EXCELENTE DECISIÓN!",
                     centro_x,
                     470,
                     arcade.color.GOLD,
@@ -1324,7 +1330,7 @@ class Nivel2(arcade.View):
                 )
 
                 arcade.draw_text(
-                    "Elegiste la respuesta correcta.",
+                    "Hablar con alguien de confianza",
                     centro_x,
                     395,
                     arcade.color.WHITE,
@@ -1333,18 +1339,9 @@ class Nivel2(arcade.View):
                 )
 
                 arcade.draw_text(
-                    "Hablar con alguien de confianza",
-                    centro_x,
-                    340,
-                    arcade.color.WHITE,
-                    21,
-                    anchor_x="center"
-                )
-
-                arcade.draw_text(
                     "y buscar ayuda puede marcar la diferencia.",
                     centro_x,
-                    305,
+                    355,
                     arcade.color.WHITE,
                     21,
                     anchor_x="center"
@@ -1353,7 +1350,16 @@ class Nivel2(arcade.View):
                 arcade.draw_text(
                     "Has logrado escapar de la oscuridad.",
                     centro_x,
-                    245,
+                    300,
+                    arcade.color.WHITE,
+                    21,
+                    anchor_x="center"
+                )
+
+                arcade.draw_text(
+                    "✦  Prepárate para el desafío final  ✦",
+                    centro_x,
+                    240,
                     arcade.color.GOLD,
                     21,
                     bold=True,

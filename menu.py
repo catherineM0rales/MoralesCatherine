@@ -8,6 +8,7 @@ class Menu(arcade.View):
 
     def __init__(self):
         super().__init__()
+        self.musica = arcade.load_sound("musica/menu.mp3")
 
         # ==================================================
         # OPCIONES DEL MENÚ
@@ -17,7 +18,8 @@ class Menu(arcade.View):
         # 2 = Salir
 
         self.opcion = 0
-
+        #pone play a la musica
+        arcade.play_sound(self.musica, volume=0.25, loop=True)
         # ==================================================
         # CARGAR IMÁGENES DEL MENÚ
         # ==================================================
