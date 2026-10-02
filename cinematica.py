@@ -238,8 +238,8 @@ class Cinematica(arcade.View):
     # ==========================================
 
     # ==========================================
-# ACTUALIZAR LA CINEMÁTICA
-# ==========================================
+    # ACTUALIZAR LA CINEMÁTICA
+    # ==========================================
 
     def on_update(self, delta_time):
 
@@ -412,3 +412,12 @@ class Cinematica(arcade.View):
 
         if sonido:
             arcade.play_sound(sonido)
+        # ==========================================
+    # SALTAR TODA LA CINEMÁTICA
+    # ==========================================
+
+    def on_key_press(self, key, modifiers):
+
+        # ESC = saltar toda la cinemática
+        if key == arcade.key.ESCAPE:
+            self.window.show_view(CaminoRosas())

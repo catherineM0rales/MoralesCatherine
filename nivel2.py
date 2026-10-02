@@ -1,9 +1,9 @@
 import arcade
 import math
 import configuracion
+import nivel3
 
 from entidades import Player, VillanoPrincipal
-import nivel3
 
 
 # ============================================================
@@ -20,8 +20,13 @@ ALTO_MAPA = 1024
 
 class Proyectil(arcade.SpriteSolidColor):
 
-    def __init__(self, x, y, jugador_x, jugador_y):
-
+    def __init__(
+        self,
+        x,
+        y,
+        jugador_x,
+        jugador_y
+    ):
         super().__init__(
             width=18,
             height=18,
@@ -45,7 +50,6 @@ class Proyectil(arcade.SpriteSolidColor):
         self.direccion_x = dx / distancia
         self.direccion_y = dy / distancia
 
-        # Velocidad
         self.velocidad = 4.5
 
     def mover(self):
@@ -103,23 +107,8 @@ class Nivel2(arcade.View):
         self.camera = arcade.Camera2D()
         self.gui_camera = arcade.Camera2D()
 
-        # ====================================================
-        # CÁMARA FIJA
-        # ====================================================
-
-        zoom_x = (
-            configuracion.ANCHO /
-            ANCHO_MAPA
-        )
-
-        zoom_y = (
-            configuracion.ALTO /
-            ALTO_MAPA
-        )
-
-        self.zoom_mapa = (
-            min(zoom_x, zoom_y) * 0.95
-        )
+        self.zoom_mapa = 0.90
+        self.velocidad_camara = 1.5
 
         self.camera.zoom = self.zoom_mapa
 
@@ -138,6 +127,7 @@ class Nivel2(arcade.View):
         self.player.center_y = 570
 
         self.player_list = arcade.SpriteList()
+
         self.player_list.append(
             self.player
         )
@@ -151,6 +141,8 @@ class Nivel2(arcade.View):
 
         self.invulnerable = False
         self.tiempo_invulnerable = 0
+
+        # Parpadeo SOLO del jugador cuando recibe daño
         self.parpadeo_daño = 0
 
         # ====================================================
@@ -168,9 +160,8 @@ class Nivel2(arcade.View):
             570
         )
 
-        self.villano.velocidad = 1.35
-
         self.villano_list = arcade.SpriteList()
+
         self.villano_list.append(
             self.villano
         )
@@ -181,8 +172,8 @@ class Nivel2(arcade.View):
 
         self.proyectiles = arcade.SpriteList()
 
-        self.tiempo_disparo = 0
-        self.intervalo_disparo = 1.15
+        # El tiempo de disparo ahora lo controla
+        # VillanoPrincipal.
 
         # ====================================================
         # RECUERDOS
@@ -217,9 +208,6 @@ class Nivel2(arcade.View):
         # PUERTA / SALIDA
         # ====================================================
 
-        # La puerta está en el centro
-        # de la pared superior.
-
         self.salida_x_min = 690
         self.salida_x_max = 846
 
@@ -231,13 +219,12 @@ class Nivel2(arcade.View):
         # ====================================================
 
         self.fase = "presentacion"
-
         self.tiempo_fase = 0
 
         self.mostrar_instrucciones = False
 
         # ====================================================
-        # PANTALLAS FINALES
+        # PANTALLAS
         # ====================================================
 
         self.mostrando_felicitacion = False
@@ -247,11 +234,21 @@ class Nivel2(arcade.View):
         self.final_ganado = False
 
         # ====================================================
+        # PANTALLA DE NIVEL COMPLETADO
+        #
+        # 0 = Siguiente nivel
+        # 1 = Volver al menú
+        # ====================================================
+
+        self.opcion_final = 0
+
+        # ====================================================
         # MENSAJES
         # ====================================================
 
         self.mensaje = ""
         self.tiempo_mensaje = 0
+
 
     # ========================================================
     # MOVIMIENTO DEL JUGADOR
@@ -302,9 +299,7 @@ class Nivel2(arcade.View):
             self.player.left = 35
 
         if self.player.right > ANCHO_MAPA - 35:
-            self.player.right = (
-                ANCHO_MAPA - 35
-            )
+            self.player.right = ANCHO_MAPA - 35
 
         # Movimiento vertical
 
@@ -314,9 +309,7 @@ class Nivel2(arcade.View):
             self.player.bottom = 35
 
         if self.player.top > ALTO_MAPA - 35:
-            self.player.top = (
-                ALTO_MAPA - 35
-            )
+            self.player.top = ALTO_MAPA - 35
 
         # Animación
 
@@ -324,6 +317,7 @@ class Nivel2(arcade.View):
             dx,
             dy
         )
+
 
     # ========================================================
     # DISPARAR PROYECTIL
@@ -342,6 +336,7 @@ class Nivel2(arcade.View):
             proyectil
         )
 
+
     # ========================================================
     # ACTUALIZAR PROYECTILES
     # ========================================================
@@ -351,22 +346,16 @@ class Nivel2(arcade.View):
         delta_time
     ):
 
-        self.tiempo_disparo += delta_time
+        # El propio villano controla su tiempo
+        # entre disparos.
 
-        # Disparo
-
-        if (
-            self.tiempo_disparo
-            >= self.intervalo_disparo
-        ):
+        if self.villano.puede_disparar():
 
             self.disparar_proyectil()
 
-            self.tiempo_disparo = 0
+        # Movimiento de los proyectiles
 
-        # Movimiento
-
-        for proyectil in self.proyectiles:
+        for proyectil in list(self.proyectiles):
 
             proyectil.mover()
 
@@ -403,6 +392,7 @@ class Nivel2(arcade.View):
 
                 self.recibir_daño()
 
+
     # ========================================================
     # RECIBIR DAÑO
     # ========================================================
@@ -412,11 +402,13 @@ class Nivel2(arcade.View):
         self.vida -= 1
 
         self.invulnerable = True
+
         self.tiempo_invulnerable = 0
 
         self.parpadeo_daño = 0.30
 
         self.mensaje = "¡Cuidado!"
+
         self.tiempo_mensaje = 1.0
 
         # Si pierde toda la vida
@@ -424,6 +416,7 @@ class Nivel2(arcade.View):
         if self.vida <= 0:
 
             self.reiniciar_nivel()
+
 
     # ========================================================
     # REINICIAR NIVEL
@@ -437,16 +430,21 @@ class Nivel2(arcade.View):
         self.villano.center_x = 1420
         self.villano.center_y = 570
 
+        # Reiniciar temporizador del villano
+
+        self.villano.tiempo_disparo = 0
+
         self.vida = self.vida_maxima
 
         self.invulnerable = False
+
         self.tiempo_invulnerable = 0
+
         self.parpadeo_daño = 0
 
         self.proyectiles.clear()
-        self.teclas.clear()
 
-        self.tiempo_disparo = 0
+        self.teclas.clear()
 
         self.mensaje = (
             "¡Debes intentarlo nuevamente!"
@@ -472,6 +470,7 @@ class Nivel2(arcade.View):
                 Recuerdo(x, y)
             )
 
+
     # ========================================================
     # ACTUALIZAR INVULNERABILIDAD
     # ========================================================
@@ -487,12 +486,10 @@ class Nivel2(arcade.View):
                 delta_time
             )
 
-            if (
-                self.tiempo_invulnerable
-                >= 0.8
-            ):
+            if self.tiempo_invulnerable >= 0.8:
 
                 self.invulnerable = False
+
                 self.tiempo_invulnerable = 0
 
         if self.parpadeo_daño > 0:
@@ -501,18 +498,91 @@ class Nivel2(arcade.View):
                 delta_time
             )
 
+
     # ========================================================
     # ACTUALIZAR CÁMARA
     # ========================================================
 
-    def actualizar_camara(self):
+    def actualizar_camara(
+        self,
+        delta_time
+    ):
+
+        objetivo_x = self.player.center_x
+        objetivo_y = self.player.center_y
+
+        actual_x = self.camera.position[0]
+        actual_y = self.camera.position[1]
+
+        nuevo_x = actual_x + (
+            objetivo_x - actual_x
+        ) * self.velocidad_camara * delta_time
+
+        nuevo_y = actual_y + (
+            objetivo_y - actual_y
+        ) * self.velocidad_camara * delta_time
+
+        # ====================================================
+        # LÍMITES DE LA CÁMARA
+        # ====================================================
+
+        mitad_ancho = (
+            configuracion.ANCHO /
+            (2 * self.zoom_mapa)
+        )
+
+        mitad_alto = (
+            configuracion.ALTO /
+            (2 * self.zoom_mapa)
+        )
+
+        limite_x_min = mitad_ancho
+
+        limite_x_max = (
+            ANCHO_MAPA - mitad_ancho
+        )
+
+        limite_y_min = mitad_alto
+
+        limite_y_max = (
+            ALTO_MAPA - mitad_alto
+        )
+
+        if limite_x_min <= limite_x_max:
+
+            nuevo_x = max(
+                limite_x_min,
+                min(
+                    limite_x_max,
+                    nuevo_x
+                )
+            )
+
+        else:
+
+            nuevo_x = ANCHO_MAPA / 2
+
+        if limite_y_min <= limite_y_max:
+
+            nuevo_y = max(
+                limite_y_min,
+                min(
+                    limite_y_max,
+                    nuevo_y
+                )
+            )
+
+        else:
+
+            nuevo_y = ALTO_MAPA / 2
 
         self.camera.position = (
-            ANCHO_MAPA / 2,
-            ALTO_MAPA / 2
+            nuevo_x,
+            nuevo_y
         )
 
         self.camera.zoom = self.zoom_mapa
+
 
     # ========================================================
     # ACTUALIZACIÓN
@@ -531,7 +601,9 @@ class Nivel2(arcade.View):
 
         if self.fase == "presentacion":
 
-            self.actualizar_camara()
+            self.actualizar_camara(
+                delta_time
+            )
 
             if self.tiempo_fase >= 3.5:
 
@@ -549,7 +621,9 @@ class Nivel2(arcade.View):
 
         if self.fase == "instrucciones":
 
-            self.actualizar_camara()
+            self.actualizar_camara(
+                delta_time
+            )
 
             return
 
@@ -559,7 +633,9 @@ class Nivel2(arcade.View):
 
         if self.fase == "felicitacion":
 
-            self.actualizar_camara()
+            self.actualizar_camara(
+                delta_time
+            )
 
             return
 
@@ -569,7 +645,9 @@ class Nivel2(arcade.View):
 
         if self.fase == "pregunta":
 
-            self.actualizar_camara()
+            self.actualizar_camara(
+                delta_time
+            )
 
             return
 
@@ -579,7 +657,17 @@ class Nivel2(arcade.View):
 
         if self.fase == "final":
 
-            self.actualizar_camara()
+            self.actualizar_camara(
+                delta_time
+            )
+
+            return
+
+        # ====================================================
+        # NIVEL COMPLETADO
+        # ====================================================
+
+        if self.fase == "completado":
 
             return
 
@@ -592,7 +680,7 @@ class Nivel2(arcade.View):
             return
 
         # ====================================================
-        # MOVIMIENTO
+        # MOVIMIENTO DEL JUGADOR
         # ====================================================
 
         self.mover_jugador()
@@ -601,9 +689,16 @@ class Nivel2(arcade.View):
         # PERSECUCIÓN DEL VILLANO
         # ====================================================
 
-        self.villano.perseguir(
-            self.player.center_x,
-            self.player.center_y
+        self.villano.intentar_movimiento(
+            self.player,
+            None
+        )
+
+        # Actualizamos el tiempo de disparo
+        # del villano.
+
+        self.villano.tiempo_disparo += (
+            delta_time
         )
 
         # ====================================================
@@ -664,13 +759,17 @@ class Nivel2(arcade.View):
             self.salida_x_min
             <= self.player.center_x
             <= self.salida_x_max
+
             and
+
             self.salida_y_min
             <= self.player.center_y
             <= self.salida_y_max
         ):
 
-            # Faltan recuerdos
+            # ------------------------------------------------
+            # FALTAN RECUERDOS
+            # ------------------------------------------------
 
             if len(self.recuerdos) > 0:
 
@@ -681,7 +780,9 @@ class Nivel2(arcade.View):
 
                 self.tiempo_mensaje = 2.0
 
-            # Tiene todos los recuerdos
+            # ------------------------------------------------
+            # TIENE TODOS LOS RECUERDOS
+            # ------------------------------------------------
 
             else:
 
@@ -709,7 +810,10 @@ class Nivel2(arcade.View):
         # CÁMARA
         # ====================================================
 
-        self.actualizar_camara()
+        self.actualizar_camara(
+            delta_time
+        )
+
 
     # ========================================================
     # TECLAS
@@ -720,6 +824,42 @@ class Nivel2(arcade.View):
         key,
         modifiers
     ):
+
+        # ====================================================
+        # PANTALLA DE NIVEL COMPLETADO
+        # ====================================================
+
+        if self.fase == "completado":
+
+            if key == arcade.key.UP:
+
+                self.opcion_final = 0
+
+            elif key == arcade.key.DOWN:
+
+                self.opcion_final = 1
+
+            elif key == arcade.key.ENTER:
+
+                # SIGUIENTE NIVEL
+
+                if self.opcion_final == 0:
+
+                    self.window.show_view(
+                        nivel3.Nivel3()
+                    )
+
+                # VOLVER AL MENÚ
+
+                else:
+
+                    from menu import Menu
+
+                    self.window.show_view(
+                        Menu()
+                    )
+
+            return
 
         # ====================================================
         # INSTRUCCIONES
@@ -799,12 +939,11 @@ class Nivel2(arcade.View):
 
             if key == arcade.key.ENTER:
 
-                if self.final_ganado:
-                    # Final bueno → cargar el Nivel 3
-                    self.window.show_view(nivel3.Nivel3())
-                else:
-                    # Final malo → salir del juego
-                    arcade.exit()
+                self.mostrando_final = False
+
+                self.fase = "completado"
+
+                self.opcion_final = 0
 
             return
 
@@ -818,6 +957,7 @@ class Nivel2(arcade.View):
 
         self.teclas.add(key)
 
+
     # ========================================================
     # SOLTAR TECLAS
     # ========================================================
@@ -829,6 +969,7 @@ class Nivel2(arcade.View):
     ):
 
         self.teclas.discard(key)
+
 
     # ========================================================
     # DIBUJAR
@@ -879,6 +1020,8 @@ class Nivel2(arcade.View):
         # ====================================================
         # JUGADOR
         # ====================================================
+
+        # Este parpadeo es solamente cuando recibe daño.
 
         if self.parpadeo_daño <= 0:
 
@@ -1029,8 +1172,6 @@ class Nivel2(arcade.View):
         # HUD
         # ====================================================
 
-        # VIDA
-
         arcade.draw_text(
             "VIDA",
             25,
@@ -1067,8 +1208,13 @@ class Nivel2(arcade.View):
         # RECUERDOS
         # ====================================================
 
+        recuerdos_obtenidos = (
+            self.total_recuerdos -
+            len(self.recuerdos)
+        )
+
         arcade.draw_text(
-            f"Recuerdos: {len(self.recuerdos)}"
+            f"Recuerdos: {recuerdos_obtenidos}"
             f"/{self.total_recuerdos}",
             configuracion.ANCHO - 250,
             configuracion.ALTO - 42,
@@ -1166,7 +1312,7 @@ class Nivel2(arcade.View):
             )
 
             arcade.draw_text(
-                "El DESAFÍO FINAL te espera...",
+                "Ahora pondrás a prueba lo aprendido.",
                 centro_x,
                 250,
                 arcade.color.GOLD,
@@ -1176,7 +1322,7 @@ class Nivel2(arcade.View):
             )
 
             arcade.draw_text(
-                "Presiona ENTER para el Nivel 3",
+                "Presiona ENTER para continuar",
                 centro_x,
                 180,
                 arcade.color.YELLOW,
@@ -1320,7 +1466,7 @@ class Nivel2(arcade.View):
             if self.final_ganado:
 
                 arcade.draw_text(
-                    "¡EXCELENTE DECISIÓN!",
+                    "¡FELICIDADES!",
                     centro_x,
                     470,
                     arcade.color.GOLD,
@@ -1330,7 +1476,7 @@ class Nivel2(arcade.View):
                 )
 
                 arcade.draw_text(
-                    "Hablar con alguien de confianza",
+                    "Elegiste la respuesta correcta.",
                     centro_x,
                     395,
                     arcade.color.WHITE,
@@ -1339,9 +1485,18 @@ class Nivel2(arcade.View):
                 )
 
                 arcade.draw_text(
+                    "Hablar con alguien de confianza",
+                    centro_x,
+                    340,
+                    arcade.color.WHITE,
+                    21,
+                    anchor_x="center"
+                )
+
+                arcade.draw_text(
                     "y buscar ayuda puede marcar la diferencia.",
                     centro_x,
-                    355,
+                    305,
                     arcade.color.WHITE,
                     21,
                     anchor_x="center"
@@ -1350,16 +1505,7 @@ class Nivel2(arcade.View):
                 arcade.draw_text(
                     "Has logrado escapar de la oscuridad.",
                     centro_x,
-                    300,
-                    arcade.color.WHITE,
-                    21,
-                    anchor_x="center"
-                )
-
-                arcade.draw_text(
-                    "✦  Prepárate para el desafío final  ✦",
-                    centro_x,
-                    240,
+                    245,
                     arcade.color.GOLD,
                     21,
                     bold=True,
@@ -1420,7 +1566,7 @@ class Nivel2(arcade.View):
                 )
 
             arcade.draw_text(
-                "Presiona ENTER para salir",
+                "Presiona ENTER para continuar",
                 centro_x,
                 175,
                 arcade.color.YELLOW,
@@ -1428,3 +1574,112 @@ class Nivel2(arcade.View):
                 bold=True,
                 anchor_x="center"
             )
+
+        # ====================================================
+        # PANTALLA DE NIVEL COMPLETADO
+        # ====================================================
+
+        elif self.fase == "completado":
+
+            # Fondo oscuro
+
+            arcade.draw_lrbt_rectangle_filled(
+                0,
+                configuracion.ANCHO,
+                0,
+                configuracion.ALTO,
+                (0, 0, 0, 220)
+            )
+
+            # Ventana
+
+            arcade.draw_lrbt_rectangle_filled(
+                250,
+                configuracion.ANCHO - 250,
+                180,
+                configuracion.ALTO - 180,
+                (25, 25, 35)
+            )
+
+            # Borde
+
+            arcade.draw_lrbt_rectangle_outline(
+                250,
+                configuracion.ANCHO - 250,
+                180,
+                configuracion.ALTO - 180,
+                arcade.color.GOLD,
+                3
+            )
+
+            # Título
+
+            arcade.draw_text(
+                "NIVEL COMPLETADO",
+                configuracion.ANCHO / 2,
+                550,
+                arcade.color.GOLD,
+                36,
+                bold=True,
+                anchor_x="center"
+            )
+
+            # Pregunta
+
+            arcade.draw_text(
+                "¿Qué querés hacer?",
+                configuracion.ANCHO / 2,
+                470,
+                arcade.color.WHITE,
+                24,
+                anchor_x="center"
+            )
+
+            # Siguiente nivel
+
+            color_siguiente = (
+                arcade.color.YELLOW
+                if self.opcion_final == 0
+                else arcade.color.WHITE
+            )
+
+            arcade.draw_text(
+                "[ SIGUIENTE NIVEL ]",
+                configuracion.ANCHO / 2,
+                370,
+                color_siguiente,
+                25,
+                bold=True,
+                anchor_x="center"
+            )
+
+            # Volver al menú
+
+            color_menu = (
+                arcade.color.YELLOW
+                if self.opcion_final == 1
+                else arcade.color.WHITE
+            )
+
+            arcade.draw_text(
+                "[ VOLVER AL MENÚ ]",
+                configuracion.ANCHO / 2,
+                290,
+                color_menu,
+                25,
+                bold=True,
+                anchor_x="center"
+            )
+
+            # Ayuda
+
+            arcade.draw_text(
+                "↑ ↓  Seleccionar     ENTER  Confirmar",
+                configuracion.ANCHO / 2,
+                220,
+                arcade.color.LIGHT_GRAY,
+                17,
+                anchor_x="center"
+            )
+
+            return
