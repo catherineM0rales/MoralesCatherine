@@ -1,14 +1,23 @@
 import arcade
 
-from configuracion import ANCHO, ALTO, TITULO
-from nivel4 import Nivel4
+from configuracion import *
+from menu import Menu
 
 
 def main():
-    ventana = arcade.Window(ANCHO, ALTO, TITULO)
-    ventana.show_view(Nivel4())
+
+    ventana = arcade.Window(
+        ANCHO,
+        ALTO,
+        TITULO
+    )
+
+    menu = Menu()
+
+    ventana.show_view(menu)
+
     arcade.run()
 
 
-if __name__ == "__main__":
+if _name_ == "_main_":
     main()
