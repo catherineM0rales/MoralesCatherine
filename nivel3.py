@@ -1,10 +1,10 @@
+
 import arcade
 import math
 import random
 
 import configuracion
-
-from entidades import Player, VillanoPrincipal
+from entidades import Player, VillanoPrincipal, Proyectil as PoderVillano
 
 
 # ============================================================
@@ -13,50 +13,6 @@ from entidades import Player, VillanoPrincipal
 
 ANCHO_MAPA = 1536
 ALTO_MAPA = 1024
-
-
-# ============================================================
-# PROYECTIL DEL VILLANO
-# ============================================================
-
-class PoderVillano(arcade.SpriteSolidColor):
-
-    def __init__(self, x, y, jugador_x, jugador_y):
-
-        super().__init__(
-            width=18,
-            height=18,
-            color=(150, 90, 220)
-        )
-
-        self.center_x = x
-        self.center_y = y
-
-        dx = jugador_x - x
-        dy = jugador_y - y
-
-        distancia = math.sqrt(dx * dx + dy * dy)
-
-        if distancia == 0:
-            distancia = 1
-
-        self.direccion_x = dx / distancia
-        self.direccion_y = dy / distancia
-
-        self.velocidad = 4.5
-
-    def update(self, delta_time=1 / 60):
-
-        self.center_x += self.direccion_x * self.velocidad
-        self.center_y += self.direccion_y * self.velocidad
-
-        if (
-            self.center_x < -50
-            or self.center_x > ANCHO_MAPA + 50
-            or self.center_y < -50
-            or self.center_y > ALTO_MAPA + 50
-        ):
-            self.remove_from_sprite_lists()
 
 
 # ============================================================
@@ -146,10 +102,7 @@ class Nivel3(arcade.View):
         # LLAVE
         # ======================================================
 
-        self.llave = Llave(
-            768,
-            500
-        )
+        self.llave = Llave(768, 500)
 
         self.llaves = arcade.SpriteList()
         self.llaves.append(self.llave)
@@ -158,10 +111,7 @@ class Nivel3(arcade.View):
         # PUERTA
         # ======================================================
 
-        self.puerta = Puerta(
-            768,
-            930
-        )
+        self.puerta = Puerta(768, 930)
 
         self.puertas = arcade.SpriteList()
         self.puertas.append(self.puerta)
@@ -170,33 +120,7 @@ class Nivel3(arcade.View):
         # VILLANOS
         # ======================================================
 
-        self.villanos = arcade.SpriteList()
-
-        villano_izquierda = VillanoPrincipal(
-            230,
-            500,
-            imagen="imagenes/personajes/enemigos/villano_nivel3.png",
-            velocidad=3.5,
-            rango_vision=2000,
-            espera_disparo=0.6
-        )
-
-        villano_derecha = VillanoPrincipal(
-            1300,
-            500,
-            imagen="imagenes/personajes/enemigos/villano_nivel3.png",
-            velocidad=3.5,
-            rango_vision=2000,
-            espera_disparo=0.6
-        )
-
-        self.villanos.append(
-            villano_izquierda
-        )
-
-        self.villanos.append(
-            villano_derecha
-        )
+        self.crear_villanos()
 
         # ======================================================
         # PROYECTILES
@@ -224,15 +148,8 @@ class Nivel3(arcade.View):
 
             while True:
 
-                ancho = random.randint(
-                    100,
-                    220
-                )
-
-                alto = random.randint(
-                    60,
-                    110
-                )
+                ancho = random.randint(100, 220)
+                alto = random.randint(60, 110)
 
                 x = random.randint(
                     ancho // 2 + 50,
@@ -254,7 +171,6 @@ class Nivel3(arcade.View):
                     )
 
                     if distancia < 150:
-
                         sirve = False
                         break
 
@@ -281,10 +197,13 @@ class Nivel3(arcade.View):
         # ======================================================
 
         self.tiene_llave = False
-
         self.juego_empezado = False
-
         self.nivel_completado = False
+
+        # 0 = SIGUIENTE NIVEL
+        # 1 = VOLVER AL MENÚ
+
+        self.opcion_final = 0
 
         # ======================================================
         # MOVIMIENTO
@@ -296,19 +215,59 @@ class Nivel3(arcade.View):
         self.derecha = False
 
         # ======================================================
-        # CÁMARA FIJA
+        # CÁMARA DEL MAPA
         # ======================================================
 
         self.camera = arcade.Camera2D()
 
-        # El mapa completo entra en pantalla.
         self.camera.zoom = 0.75
 
-        # La cámara queda SIEMPRE en el centro.
         self.camera.position = (
             ANCHO_MAPA / 2,
             ALTO_MAPA / 2
         )
+
+        # ======================================================
+        # NUEVA CÁMARA DE INTERFAZ
+        # ======================================================
+
+        self.gui_camera = arcade.Camera2D()
+
+        self.gui_camera.zoom = 1
+
+        self.gui_camera.position = (
+            configuracion.ANCHO / 2,
+            configuracion.ALTO / 2
+        )
+
+    # ============================================================
+    # CREAR VILLANOS
+    # ============================================================
+
+    def crear_villanos(self):
+
+        self.villanos = arcade.SpriteList()
+
+        villano_izquierda = VillanoPrincipal(
+            230,
+            500,
+            imagen="imagenes/personajes/enemigos/villano_nivel3.png",
+            velocidad=3.5,
+            rango_vision=2000,
+            espera_disparo=0.6
+        )
+
+        villano_derecha = VillanoPrincipal(
+            1300,
+            500,
+            imagen="imagenes/personajes/enemigos/villano_nivel3.png",
+            velocidad=3.5,
+            rango_vision=2000,
+            espera_disparo=0.6
+        )
+
+        self.villanos.append(villano_izquierda)
+        self.villanos.append(villano_derecha)
 
     # ============================================================
     # COLISIÓN CON PARED
@@ -318,25 +277,11 @@ class Nivel3(arcade.View):
 
         for pared in self.paredes:
 
-            izquierda = (
-                pared.center_x
-                - pared.width / 2
-            )
+            izquierda = pared.center_x - pared.width / 2
+            derecha = pared.center_x + pared.width / 2
 
-            derecha = (
-                pared.center_x
-                + pared.width / 2
-            )
-
-            abajo = (
-                pared.center_y
-                - pared.height / 2
-            )
-
-            arriba = (
-                pared.center_y
-                + pared.height / 2
-            )
+            abajo = pared.center_y - pared.height / 2
+            arriba = pared.center_y + pared.height / 2
 
             if (
                 x >= izquierda
@@ -344,7 +289,6 @@ class Nivel3(arcade.View):
                 and y >= abajo
                 and y <= arriba
             ):
-
                 return True
 
         return False
@@ -372,42 +316,20 @@ class Nivel3(arcade.View):
 
         if dx == 0 and dy == 0:
 
-            self.jugador.update_animation(
-                0,
-                0
-            )
-
+            self.jugador.update_animation(0, 0)
             return
 
-        # --------------------------------------------------------
-        # NORMALIZAR DIAGONAL
-        # --------------------------------------------------------
-
-        distancia = math.sqrt(
-            dx * dx +
-            dy * dy
-        )
+        distancia = math.sqrt(dx * dx + dy * dy)
 
         dx /= distancia
         dy /= distancia
 
-        velocidad = (
-            configuracion.VELOCIDAD_JUGADOR
-        )
+        velocidad = configuracion.VELOCIDAD_JUGADOR
 
-        nuevo_x = (
-            self.jugador.center_x
-            + dx * velocidad
-        )
+        nuevo_x = self.jugador.center_x + dx * velocidad
+        nuevo_y = self.jugador.center_y + dy * velocidad
 
-        nuevo_y = (
-            self.jugador.center_y
-            + dy * velocidad
-        )
-
-        # --------------------------------------------------------
         # COLISIÓN HORIZONTAL
-        # --------------------------------------------------------
 
         if not self.choca_con_pared(
             nuevo_x,
@@ -416,9 +338,7 @@ class Nivel3(arcade.View):
 
             self.jugador.center_x = nuevo_x
 
-        # --------------------------------------------------------
         # COLISIÓN VERTICAL
-        # --------------------------------------------------------
 
         if not self.choca_con_pared(
             self.jugador.center_x,
@@ -427,9 +347,7 @@ class Nivel3(arcade.View):
 
             self.jugador.center_y = nuevo_y
 
-        # --------------------------------------------------------
         # LÍMITES DEL MAPA
-        # --------------------------------------------------------
 
         margen_x = self.jugador.width / 2
         margen_y = self.jugador.height / 2
@@ -450,10 +368,7 @@ class Nivel3(arcade.View):
             )
         )
 
-        self.jugador.update_animation(
-            dx,
-            dy
-        )
+        self.jugador.update_animation(dx, dy)
 
     # ============================================================
     # ACTUALIZAR
@@ -461,58 +376,25 @@ class Nivel3(arcade.View):
 
     def on_update(self, delta_time):
 
-        # --------------------------------------------------------
-        # SI TODAVÍA NO EMPEZÓ
-        # --------------------------------------------------------
-
         if not self.juego_empezado:
             return
-
-        # --------------------------------------------------------
-        # SI TERMINÓ
-        # --------------------------------------------------------
 
         if self.nivel_completado:
             return
 
-        # ========================================================
         # JUGADOR
-        # ========================================================
 
         self.mover_jugador()
 
-        # ========================================================
         # VILLANOS
-        # ========================================================
 
         for villano in self.villanos:
-
-            # ----------------------------------------------------
-            # IMPORTANTE:
-            #
-            # Antes estaba:
-            #
-            # if puede_ver_jugador:
-            #     actualizar()
-            #
-            # Eso hacía que los villanos se quedaran quietos
-            # cuando una pared bloqueaba la visión.
-            #
-            # Ahora SIEMPRE intentan seguir al jugador.
-            #
-            # Las paredes son tenidas en cuenta por
-            # villano.actualizar().
-            # ----------------------------------------------------
 
             villano.actualizar(
                 self.jugador,
                 self.paredes,
                 delta_time
             )
-
-            # ----------------------------------------------------
-            # DISPARAR SOLAMENTE SI LO VE
-            # ----------------------------------------------------
 
             if villano.puede_ver_jugador(
                 self.jugador,
@@ -528,19 +410,27 @@ class Nivel3(arcade.View):
                         self.jugador.center_y
                     )
 
-                    self.proyectiles.append(
-                        proyectil
-                    )
+                    self.proyectiles.append(proyectil)
 
-        # ========================================================
+        # ======================================================
+        # CONTACTO DIRECTO CON LOS VILLANOS
+        # ======================================================
+
+        if arcade.check_for_collision_with_list(
+            self.jugador,
+            self.villanos
+        ):
+
+            self.reiniciar_nivel()
+            return
+
+        # ======================================================
         # PROYECTILES
-        # ========================================================
+        # ======================================================
 
         self.proyectiles.update()
 
-        # ========================================================
         # PROYECTILES CONTRA JUGADOR
-        # ========================================================
 
         impactos = arcade.check_for_collision_with_list(
             self.jugador,
@@ -556,16 +446,11 @@ class Nivel3(arcade.View):
             if self.vida <= 0:
 
                 self.reiniciar_nivel()
-
                 return
 
-        # ========================================================
         # PROYECTILES CONTRA PAREDES
-        # ========================================================
 
-        for proyectil in list(
-            self.proyectiles
-        ):
+        for proyectil in list(self.proyectiles):
 
             if self.choca_con_pared(
                 proyectil.center_x,
@@ -574,9 +459,9 @@ class Nivel3(arcade.View):
 
                 proyectil.remove_from_sprite_lists()
 
-        # ========================================================
+        # ======================================================
         # RECOGER LLAVE
-        # ========================================================
+        # ======================================================
 
         if not self.tiene_llave:
 
@@ -586,12 +471,11 @@ class Nivel3(arcade.View):
             ):
 
                 self.tiene_llave = True
-
                 self.llave.remove_from_sprite_lists()
 
-        # ========================================================
+        # ======================================================
         # PUERTA
-        # ========================================================
+        # ======================================================
 
         if self.tiene_llave:
 
@@ -601,6 +485,7 @@ class Nivel3(arcade.View):
             ):
 
                 self.nivel_completado = True
+                self.opcion_final = 0
 
     # ============================================================
     # TECLAS PRESIONADAS
@@ -608,46 +493,65 @@ class Nivel3(arcade.View):
 
     def on_key_press(self, key, modifiers):
 
-        # --------------------------------------------------------
-        # ENTER
-        # --------------------------------------------------------
+        # ======================================================
+        # PANTALLA DE NIVEL COMPLETADO
+        # ======================================================
+
+        if self.nivel_completado:
+
+            if key == arcade.key.UP:
+
+                self.opcion_final = 0
+
+            elif key == arcade.key.DOWN:
+
+                self.opcion_final = 1
+
+            elif key == arcade.key.ENTER:
+
+                if self.opcion_final == 0:
+
+                    import nivel4
+
+                    self.window.show_view(
+                        nivel4.Nivel4()
+                    )
+
+                elif self.opcion_final == 1:
+
+                    import menu
+
+                    self.window.show_view(
+                        menu.Menu()
+                    )
+
+            return
+
+        # ======================================================
+        # ENTER PARA COMENZAR
+        # ======================================================
 
         if key == arcade.key.ENTER:
 
             if not self.juego_empezado:
 
                 self.juego_empezado = True
-
                 return
 
-            if self.nivel_completado:
-
-                import menu
-
-                self.window.show_view(
-                    menu.Menu()
-                )
-
-                return
-
-        # --------------------------------------------------------
+        # ======================================================
         # MOVIMIENTO
-        # --------------------------------------------------------
+        # ======================================================
 
         if key == arcade.key.UP:
-
             self.arriba = True
 
         elif key == arcade.key.DOWN:
-
             self.abajo = True
 
         elif key == arcade.key.LEFT:
-
             self.izquierda = True
 
         elif key == arcade.key.RIGHT:
-
             self.derecha = True
 
     # ============================================================
@@ -657,19 +561,15 @@ class Nivel3(arcade.View):
     def on_key_release(self, key, modifiers):
 
         if key == arcade.key.UP:
-
             self.arriba = False
 
         elif key == arcade.key.DOWN:
-
             self.abajo = False
 
         elif key == arcade.key.LEFT:
-
             self.izquierda = False
 
         elif key == arcade.key.RIGHT:
-
             self.derecha = False
 
     # ============================================================
@@ -678,102 +578,61 @@ class Nivel3(arcade.View):
 
     def reiniciar_nivel(self):
 
-        # --------------------------------------------------------
         # JUGADOR
-        # --------------------------------------------------------
 
         self.jugador.center_x = 768
         self.jugador.center_y = 100
 
-        # --------------------------------------------------------
         # ESTADOS
-        # --------------------------------------------------------
 
         self.vida = 5
-
         self.tiene_llave = False
-
         self.juego_empezado = False
-
         self.nivel_completado = False
 
-        # --------------------------------------------------------
+        self.opcion_final = 0
+
+        self.arriba = False
+        self.abajo = False
+        self.izquierda = False
+        self.derecha = False
+
         # LLAVE
-        # --------------------------------------------------------
 
         self.llaves = arcade.SpriteList()
 
-        self.llave = Llave(
-            768,
-            500
-        )
+        self.llave = Llave(768, 500)
+        self.llaves.append(self.llave)
 
-        self.llaves.append(
-            self.llave
-        )
-
-        # --------------------------------------------------------
         # PUERTA
-        # --------------------------------------------------------
 
         self.puertas = arcade.SpriteList()
 
-        self.puerta = Puerta(
-            768,
-            930
-        )
+        self.puerta = Puerta(768, 930)
+        self.puertas.append(self.puerta)
 
-        self.puertas.append(
-            self.puerta
-        )
-
-        # --------------------------------------------------------
         # VILLANOS
-        # --------------------------------------------------------
 
-        self.villanos = arcade.SpriteList()
+        self.crear_villanos()
 
-        villano_izquierda = VillanoPrincipal(
-            230,
-            500,
-            imagen="imagenes/personajes/enemigos/villano_nivel3.png",
-            velocidad=3.5,
-            rango_vision=2000,
-            espera_disparo=0.6
-        )
-
-        villano_derecha = VillanoPrincipal(
-            1300,
-            500,
-            imagen="imagenes/personajes/enemigos/villano_nivel3.png",
-            velocidad=3.5,
-            rango_vision=2000,
-            espera_disparo=0.6
-        )
-
-        self.villanos.append(
-            villano_izquierda
-        )
-
-        self.villanos.append(
-            villano_derecha
-        )
-
-        # --------------------------------------------------------
         # PROYECTILES
-        # --------------------------------------------------------
 
         self.proyectiles = arcade.SpriteList()
 
-        # --------------------------------------------------------
-        # CÁMARA
-        # --------------------------------------------------------
+        # CÁMARA DEL MAPA
 
         self.camera.zoom = 0.75
 
         self.camera.position = (
             ANCHO_MAPA / 2,
             ALTO_MAPA / 2
+        )
+
+        # CÁMARA DE INTERFAZ
+
+        self.gui_camera.position = (
+            configuracion.ANCHO / 2,
+            configuracion.ALTO / 2
         )
 
     # ============================================================
@@ -784,15 +643,13 @@ class Nivel3(arcade.View):
 
         self.clear()
 
-        # ========================================================
-        # CÁMARA FIJA
-        # ========================================================
+        # ======================================================
+        # DIBUJAR EL MUNDO CON LA CÁMARA DEL MAPA
+        # ======================================================
 
         self.camera.use()
 
-        # ========================================================
         # FONDO
-        # ========================================================
 
         arcade.draw_texture_rect(
             self.fondo,
@@ -804,45 +661,33 @@ class Nivel3(arcade.View):
             )
         )
 
-        # ========================================================
         # PAREDES
-        # ========================================================
 
         self.paredes.draw()
 
-        # ========================================================
         # LLAVE
-        # ========================================================
 
         self.llaves.draw()
 
-        # ========================================================
         # PUERTA
-        # ========================================================
 
         self.puertas.draw()
 
-        # ========================================================
         # VILLANOS
-        # ========================================================
 
         self.villanos.draw()
 
-        # ========================================================
         # PROYECTILES
-        # ========================================================
 
         self.proyectiles.draw()
 
-        # ========================================================
         # JUGADOR
-        # ========================================================
 
         self.jugadores.draw()
 
-        # ========================================================
+        # ======================================================
         # HUD
-        # ========================================================
+        # ======================================================
 
         arcade.draw_text(
             f"Vida: {self.vida}",
@@ -872,15 +717,11 @@ class Nivel3(arcade.View):
                 20
             )
 
-        # ========================================================
+        # ======================================================
         # CUADRO DE INFORMACIÓN INICIAL
-        # ========================================================
+        # ======================================================
 
         if not self.juego_empezado:
-
-            # ----------------------------------------------------
-            # Oscurecemos visualmente el centro
-            # ----------------------------------------------------
 
             arcade.draw_lbwh_rectangle_filled(
                 368,
@@ -889,10 +730,6 @@ class Nivel3(arcade.View):
                 400,
                 (20, 15, 30, 235)
             )
-
-            # ----------------------------------------------------
-            # Borde del cuadro
-            # ----------------------------------------------------
 
             arcade.draw_lbwh_rectangle_outline(
                 368,
@@ -903,10 +740,6 @@ class Nivel3(arcade.View):
                 4
             )
 
-            # ----------------------------------------------------
-            # TÍTULO
-            # ----------------------------------------------------
-
             arcade.draw_text(
                 "NIVEL 3",
                 ANCHO_MAPA / 2,
@@ -915,10 +748,6 @@ class Nivel3(arcade.View):
                 42,
                 anchor_x="center"
             )
-
-            # ----------------------------------------------------
-            # INFORMACIÓN
-            # ----------------------------------------------------
 
             arcade.draw_text(
                 "Dos enemigos te están buscando.",
@@ -947,10 +776,6 @@ class Nivel3(arcade.View):
                 anchor_x="center"
             )
 
-            # ----------------------------------------------------
-            # CONTROLES
-            # ----------------------------------------------------
-
             arcade.draw_text(
                 "Usá las flechas para moverte.",
                 ANCHO_MAPA / 2,
@@ -959,10 +784,6 @@ class Nivel3(arcade.View):
                 20,
                 anchor_x="center"
             )
-
-            # ----------------------------------------------------
-            # ENTER
-            # ----------------------------------------------------
 
             arcade.draw_text(
                 "Presioná ENTER para comenzar",
@@ -973,43 +794,118 @@ class Nivel3(arcade.View):
                 anchor_x="center"
             )
 
-        # ========================================================
-        # NIVEL COMPLETADO
-        # ========================================================
+        # ======================================================
+        # PANTALLA DE NIVEL COMPLETADO
+        # ======================================================
 
         if self.nivel_completado:
 
-            arcade.draw_lbwh_rectangle_filled(
-                368,
-                380,
-                800,
-                260,
-                (20, 15, 30, 240)
+            # CAMBIAR A LA CÁMARA DE INTERFAZ
+
+            self.gui_camera.position = (
+                configuracion.ANCHO / 2,
+                configuracion.ALTO / 2
             )
 
-            arcade.draw_lbwh_rectangle_outline(
-                368,
-                380,
-                800,
-                260,
-                arcade.color.WHITE,
-                4
+            self.gui_camera.use()
+
+            # FONDO OSCURO: CUBRE TODA LA VENTANA
+
+            arcade.draw_lrbt_rectangle_filled(
+                0,
+                configuracion.ANCHO,
+                0,
+                configuracion.ALTO,
+                (0, 0, 0, 220)
             )
+
+            # VENTANA CENTRAL
+
+            arcade.draw_lrbt_rectangle_filled(
+                250,
+                configuracion.ANCHO - 250,
+                180,
+                configuracion.ALTO - 180,
+                (25, 25, 35)
+            )
+
+            # BORDE DORADO
+
+            arcade.draw_lrbt_rectangle_outline(
+                250,
+                configuracion.ANCHO - 250,
+                180,
+                configuracion.ALTO - 180,
+                arcade.color.GOLD,
+                3
+            )
+
+            # TÍTULO
 
             arcade.draw_text(
-                "¡NIVEL COMPLETADO!",
-                ANCHO_MAPA / 2,
-                530,
-                arcade.color.WHITE,
-                40,
+                "NIVEL COMPLETADO",
+                configuracion.ANCHO / 2,
+                550,
+                arcade.color.GOLD,
+                36,
+                bold=True,
                 anchor_x="center"
             )
 
+            # PREGUNTA
+
             arcade.draw_text(
-                "Presioná ENTER para volver al menú",
-                ANCHO_MAPA / 2,
-                460,
+                "¿Qué querés hacer?",
+                configuracion.ANCHO / 2,
+                470,
                 arcade.color.WHITE,
-                20,
+                24,
+                anchor_x="center"
+            )
+
+            # SIGUIENTE NIVEL
+
+            color_siguiente = (
+                arcade.color.YELLOW
+                if self.opcion_final == 0
+                else arcade.color.WHITE
+            )
+
+            arcade.draw_text(
+                "[ SIGUIENTE NIVEL ]",
+                configuracion.ANCHO / 2,
+                370,
+                color_siguiente,
+                25,
+                bold=True,
+                anchor_x="center"
+            )
+
+            # VOLVER AL MENÚ
+
+            color_menu = (
+                arcade.color.YELLOW
+                if self.opcion_final == 1
+                else arcade.color.WHITE
+            )
+
+            arcade.draw_text(
+                "[ VOLVER AL MENÚ ]",
+                configuracion.ANCHO / 2,
+                290,
+                color_menu,
+                25,
+                bold=True,
+                anchor_x="center"
+            )
+
+            # INDICACIONES
+
+            arcade.draw_text(
+                "↑ ↓  Seleccionar     ENTER  Confirmar",
+                configuracion.ANCHO / 2,
+                220,
+                arcade.color.LIGHT_GRAY,
+                17,
                 anchor_x="center"
             )

@@ -1,5 +1,6 @@
 import arcade
 import configuracion
+from entidades import Player
 from nivel1 import Nivel1
 
 class CaminoRosas(arcade.View):
@@ -9,13 +10,9 @@ class CaminoRosas(arcade.View):
         # 1. Cargar Fondo
         self.fondo = arcade.load_texture("imagenes/mapas/camino.png")
         
-        # 2. Cargar Texturas del Protagonista
-        self.textura_quieto = arcade.load_texture("imagenes/personajes/protagonista/quieto.png")
-        self.textura_caminar1 = arcade.load_texture("imagenes/personajes/protagonista/caminar1.png")
-        self.textura_caminar2 = arcade.load_texture("imagenes/personajes/protagonista/caminar2.png")
-
-        # Sprite del Jugador
-        self.jugador_sprite = arcade.Sprite(self.textura_quieto, scale=0.2)
+        # 2. Crear al protagonista usando la clase compartida
+        # Se conserva la escala original de este tramo del juego.
+        self.jugador_sprite = Player(escala=0.2)
 
         # Sprite del Papel / Dibujo (provisional si no tenés imagen)
         try:
@@ -27,10 +24,6 @@ class CaminoRosas(arcade.View):
         self.jugador_x = 60
         self.jugador_y = configuracion.ALTO // 2
         self.velocidad = 3.5
-
-        # Control de Animación
-        self.contador_animacion = 0
-        self.frame_animacion = 0
 
         # Control de teclas
         self.left_pressed = False
@@ -98,7 +91,7 @@ class CaminoRosas(arcade.View):
 
     def on_update(self, delta_time):
         if self.leyendo_nota:
-            self.jugador_sprite.texture = self.textura_quieto
+            self.jugador_sprite.update_animation(0, 0)
             return
 
         # 1. Movimiento y animación
@@ -117,19 +110,10 @@ class CaminoRosas(arcade.View):
             self.jugador_y -= self.velocidad
             se_mueve = True
 
-        # Lógica de animación paso a paso
-        if se_mueve:
-            self.contador_animacion += 1
-            if self.contador_animacion >= 10:  # Cambia de paso cada 10 frames
-                self.contador_animacion = 0
-                self.frame_animacion = 1 - self.frame_animacion  # Alterna entre 0 y 1
-                
-                if self.frame_animacion == 0:
-                    self.jugador_sprite.texture = self.textura_caminar1
-                else:
-                    self.jugador_sprite.texture = self.textura_caminar2
-        else:
-            self.jugador_sprite.texture = self.textura_quieto
+        # Animación reutilizada desde la clase Player de entidades.py
+        dx_animacion = int(self.right_pressed) - int(self.left_pressed)
+        dy_animacion = int(self.up_pressed) - int(self.down_pressed)
+        self.jugador_sprite.update_animation(dx_animacion, dy_animacion)
 
         # 2. Paredes / Límites del mapa
         self.jugador_y = max(self.limite_abajo, min(self.jugador_y, self.limite_arriba))

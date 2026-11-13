@@ -8,11 +8,11 @@ import math
 
 class Player(arcade.Sprite):
 
-    def __init__(self):
+    def __init__(self, escala=0.15):
 
         super().__init__(
             "imagenes/personajes/protagonista/quieto.png",
-            scale=0.15
+            scale=escala
         )
 
         # ========================================================
@@ -551,7 +551,7 @@ class Recuerdo(arcade.Sprite):
 
 
 # ============================================================
-# PROYECTIL
+# PROYECTIL COMPARTIDO
 # ============================================================
 
 class Proyectil(arcade.SpriteSolidColor):
@@ -561,44 +561,62 @@ class Proyectil(arcade.SpriteSolidColor):
         x,
         y,
         objetivo_x,
-        objetivo_y
+        objetivo_y,
+        velocidad=4.5,
+        ancho=18,
+        alto=18,
+        color=(150, 90, 220),
+        ancho_mapa=1536,
+        alto_mapa=1024
     ):
 
         super().__init__(
-            width=18,
-            height=18,
-            color=(150, 90, 220)
+            width=ancho,
+            height=alto,
+            color=color
         )
 
         self.center_x = x
         self.center_y = y
 
-        self.velocidad = 4.5
-
         dx = objetivo_x - x
         dy = objetivo_y - y
 
         distancia = math.sqrt(
-            dx * dx +
-            dy * dy
+            dx * dx + dy * dy
         )
 
         if distancia == 0:
-
-            self.dx = 0
-            self.dy = 0
-
+            self.direccion_x = 0
+            self.direccion_y = 0
         else:
+            self.direccion_x = dx / distancia
+            self.direccion_y = dy / distancia
 
-            self.dx = dx / distancia
-            self.dy = dy / distancia
+        self.velocidad = velocidad
+        self.ancho_mapa = ancho_mapa
+        self.alto_mapa = alto_mapa
 
     def mover(self):
 
         self.center_x += (
-            self.dx * self.velocidad
+            self.direccion_x * self.velocidad
         )
 
         self.center_y += (
-            self.dy * self.velocidad
+            self.direccion_y * self.velocidad
         )
+
+    def update(self, delta_time=1 / 60):
+
+        self.mover()
+
+        margen = 50
+
+        if (
+            self.center_x < -margen
+            or self.center_x > self.ancho_mapa + margen
+            or self.center_y < -margen
+            or self.center_y > self.alto_mapa + margen
+        ):
+            self.remove_from_sprite_lists()

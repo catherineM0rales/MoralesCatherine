@@ -1,3 +1,4 @@
+
 import arcade
 
 from configuracion import *
@@ -7,6 +8,7 @@ from nombre import PantallaNombre
 class Menu(arcade.View):
 
     def __init__(self):
+
         super().__init__()
 
         self.opcion = 0
@@ -86,6 +88,7 @@ class Menu(arcade.View):
         y,
         ancho_max
     ):
+
         escala = ancho_max / textura.width
 
         ancho = textura.width * escala
@@ -108,10 +111,6 @@ class Menu(arcade.View):
     def on_draw(self):
 
         self.clear()
-
-        # ============================================================
-        # RESTABLECER LA CÁMARA
-        # ============================================================
 
         self.camera.position = (
             ANCHO / 2,
@@ -145,21 +144,22 @@ class Menu(arcade.View):
             arcade.draw_lrbt_rectangle_filled(
                 200,
                 ANCHO - 200,
-                100,
-                ALTO - 100,
-                (0, 0, 0, 210)
+                80,
+                ALTO - 80,
+                (0, 0, 0, 220)
             )
 
             arcade.draw_text(
                 "SELECCIONAR NIVEL",
                 ANCHO // 2,
-                ALTO - 180,
+                ALTO - 150,
                 arcade.color.WHITE,
                 38,
                 anchor_x="center"
             )
 
             # NIVEL 1
+
             color_nivel1 = (
                 arcade.color.YELLOW
                 if self.nivel_opcion == 0
@@ -169,13 +169,14 @@ class Menu(arcade.View):
             arcade.draw_text(
                 "NIVEL 1",
                 ANCHO // 2,
-                470,
+                500,
                 color_nivel1,
                 30,
                 anchor_x="center"
             )
 
             # NIVEL 2
+
             color_nivel2 = (
                 arcade.color.YELLOW
                 if self.nivel_opcion == 1
@@ -185,13 +186,14 @@ class Menu(arcade.View):
             arcade.draw_text(
                 "NIVEL 2",
                 ANCHO // 2,
-                390,
+                425,
                 color_nivel2,
                 30,
                 anchor_x="center"
             )
 
             # NIVEL 3
+
             color_nivel3 = (
                 arcade.color.YELLOW
                 if self.nivel_opcion == 2
@@ -201,34 +203,52 @@ class Menu(arcade.View):
             arcade.draw_text(
                 "NIVEL 3",
                 ANCHO // 2,
-                310,
+                350,
                 color_nivel3,
                 30,
                 anchor_x="center"
             )
 
-            # VOLVER
-            color_volver = (
+            # NIVEL 4
+
+            color_nivel4 = (
                 arcade.color.YELLOW
                 if self.nivel_opcion == 3
                 else arcade.color.WHITE
             )
 
             arcade.draw_text(
+                "NIVEL 4",
+                ANCHO // 2,
+                275,
+                color_nivel4,
+                30,
+                anchor_x="center"
+            )
+
+            # VOLVER
+
+            color_volver = (
+                arcade.color.YELLOW
+                if self.nivel_opcion == 4
+                else arcade.color.WHITE
+            )
+
+            arcade.draw_text(
                 "VOLVER",
                 ANCHO // 2,
-                210,
+                190,
                 color_volver,
                 26,
                 anchor_x="center"
             )
 
             arcade.draw_text(
-                "↑ ↓  Seleccionar     ENTER  Entrar     ESC  Volver",
+                "↑ ↓  Seleccionar       ENTER  Entrar       ESC  Volver",
                 ANCHO // 2,
-                135,
+                115,
                 arcade.color.LIGHT_GRAY,
-                18,
+                16,
                 anchor_x="center"
             )
 
@@ -352,16 +372,17 @@ class Menu(arcade.View):
             if key == arcade.key.UP:
 
                 self.nivel_opcion -= 1
-                self.nivel_opcion %= 4
+                self.nivel_opcion %= 5
 
             elif key == arcade.key.DOWN:
 
                 self.nivel_opcion += 1
-                self.nivel_opcion %= 4
+                self.nivel_opcion %= 5
 
             elif key == arcade.key.ENTER:
 
                 # NIVEL 1
+
                 if self.nivel_opcion == 0:
 
                     import nivel1
@@ -371,6 +392,7 @@ class Menu(arcade.View):
                     )
 
                 # NIVEL 2
+
                 elif self.nivel_opcion == 1:
 
                     import nivel2
@@ -380,6 +402,7 @@ class Menu(arcade.View):
                     )
 
                 # NIVEL 3
+
                 elif self.nivel_opcion == 2:
 
                     import nivel3
@@ -388,8 +411,19 @@ class Menu(arcade.View):
                         nivel3.Nivel3()
                     )
 
-                # VOLVER
+                # NIVEL 4
+
                 elif self.nivel_opcion == 3:
+
+                    import nivel4
+
+                    self.window.show_view(
+                        nivel4.Nivel4()
+                    )
+
+                # VOLVER
+
+                elif self.nivel_opcion == 4:
 
                     self.mostrando_niveles = False
                     self.opcion = 0
@@ -436,6 +470,7 @@ class Menu(arcade.View):
         if key == arcade.key.ENTER:
 
             # JUGAR
+
             if self.opcion == 0:
 
                 pantalla_nombre = PantallaNombre()
@@ -445,17 +480,20 @@ class Menu(arcade.View):
                 )
 
             # NIVELES
+
             elif self.opcion == 1:
 
                 self.mostrando_niveles = True
                 self.nivel_opcion = 0
 
             # CONTROLES
+
             elif self.opcion == 2:
 
                 self.mostrando_controles = True
 
             # SALIR
+
             elif self.opcion == 3:
 
                 arcade.exit()

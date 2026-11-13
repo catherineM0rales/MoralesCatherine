@@ -3,7 +3,7 @@ import math
 import configuracion
 import nivel3
 
-from entidades import Player, VillanoPrincipal
+from entidades import Player, VillanoPrincipal, Proyectil, Recuerdo
 
 
 # ============================================================
@@ -12,74 +12,6 @@ from entidades import Player, VillanoPrincipal
 
 ANCHO_MAPA = 1536
 ALTO_MAPA = 1024
-
-
-# ============================================================
-# PROYECTIL DEL VILLANO
-# ============================================================
-
-class Proyectil(arcade.SpriteSolidColor):
-
-    def __init__(
-        self,
-        x,
-        y,
-        jugador_x,
-        jugador_y
-    ):
-        super().__init__(
-            width=18,
-            height=18,
-            color=(150, 90, 220)
-        )
-
-        self.center_x = x
-        self.center_y = y
-
-        # Dirección hacia el jugador
-        dx = jugador_x - x
-        dy = jugador_y - y
-
-        distancia = math.sqrt(
-            dx ** 2 + dy ** 2
-        )
-
-        if distancia == 0:
-            distancia = 1
-
-        self.direccion_x = dx / distancia
-        self.direccion_y = dy / distancia
-
-        self.velocidad = 4.5
-
-    def mover(self):
-
-        self.center_x += (
-            self.direccion_x *
-            self.velocidad
-        )
-
-        self.center_y += (
-            self.direccion_y *
-            self.velocidad
-        )
-
-
-# ============================================================
-# RECUERDO
-# ============================================================
-
-class Recuerdo(arcade.Sprite):
-
-    def __init__(self, x, y):
-
-        super().__init__(
-            "imagenes/objetos/recuerdo.png",
-            scale=0.10
-        )
-
-        self.center_x = x
-        self.center_y = y
 
 
 # ============================================================
